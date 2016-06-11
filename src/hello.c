@@ -1,9 +1,19 @@
 #include <linux/init.h>
 #include <linux/module.h>
-#include <linux/fs.h>
-#include <linux/cdev.h>
 #include <asm/uaccess.h>
+#include <linux/ioctl.h>
+#include <linux/kernel.h>  
+#include <linux/fs.h>  
+#include <linux/errno.h>  
+#include <linux/types.h>  
+#include <linux/fcntl.h>  
+#include <linux/cdev.h>  
+#include <linux/version.h>  
+#include <linux/vmalloc.h>  
+#include <linux/ctype.h>  
+#include <linux/pagemap.h>
  
+#define COMMAND 1
  
 static char 	alpha[27];
 dev_t 		devnum;
@@ -46,6 +56,15 @@ ssize_t hello_dev_read(struct file *file, char __user *buf, size_t count, loff_t
 		return -1;
 }
 
+long hello_ioctl(struct file *flip, unsigned int cmd, unsigned long arg ) {
+	if (cmd == COMMAND ) {
+		printk("ioctl COMMAND  successful\n");
+		return 0;
+	}	
+	printk("ioctl error\n");
+	return -1;
+}
+
 void init_alpha(void) {
 	int 	i;
 
@@ -72,15 +91,42 @@ ssize_t hello_dev_write(struct file *file, const char __user *buf, size_t count,
 	else
 	        return -1;
 }
+
+loff_t hello_lsseek(struct file *filp, loff_t off, int whence)  
+{  
+        loff_t newpos = -1;
+
+        switch(whence)
+        {
+        case 0: /* SEEK_SET */
+                newpos = off;
+                break;
+
+        case 1: /* SEEK_CUR */
+                newpos = filp->f_pos + off;
+                break;
+
+        case 2: /* SEEK_END */
+        default: /* can't happen */
+		return -1;
+        }
+        if (newpos < 0)
+                return -1;
+        filp->f_pos = newpos;
+	printk("flip f_pos = %ld\n", (long)newpos);
+        return newpos;
+}  
  
  
 static struct cdev hello_dev;
 static struct file_operations fops ={
-         .owner   = THIS_MODULE,
-         .open    = hello_dev_open,
-         .release = hello_dev_release,
-         .read    = hello_dev_read,
-         .write   = hello_dev_write,
+         .owner   	   = THIS_MODULE,
+	 .llseek	   = hello_lsseek,
+         .open    	   = hello_dev_open,
+         .release          = hello_dev_release,
+         .read             = hello_dev_read,
+         .write            = hello_dev_write,
+	 .unlocked_ioctl   = hello_ioctl,
 };
  
 static int __init hello_init(void)
@@ -109,7 +155,8 @@ void __exit hello_exit(void)
 {
 	printk(exit_mesg);
 	cdev_del(&hello_dev);
-	unregister_chrdev_region(MKDEV(major, minor), 1);
+	//unregister_chrdev_region(MKDEV(major, minor), 1);
+	unregister_chrdev_region(devnum, 1);
 
 	return;
 }

@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#define COMMAND 1
+
 void die(char *info){
 	perror(info);
 	exit(-1);
@@ -32,10 +34,27 @@ main(void)
 	}
 	printf("open /dev/firebroo successful\n");
 
+	if ( (ret = ioctl(fd, COMMAND, 0)) < 0) {
+		die("ioctl");
+	}
+	printf("ioctl successful\n");
+
+	if ( (ret = lseek(fd, 10, 1)) < 0) {
+		die("lseek");
+	}
+	if ( (ret = read(fd, buf2, 5)) < 0) {
+		die("read");
+	}
+	if (ret == 5) {
+		printf("lsseek successful, read from kernel: [%s]\n", buf2);
+	}
+
+	memset(buf2, '\0', 27);
 	if ( (ret = read(fd, buf2, 26)) == 0) {
 		die("read");
 	}
 	printf("read from kernel successful: [%s]\n", buf2);
+	
 
 	if ( (ret = write(fd, buf, 26)) < 0) {
 		die("write");
