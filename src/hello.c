@@ -121,7 +121,7 @@ loff_t hello_lsseek(struct file *filp, loff_t off, int whence)
 static struct cdev hello_dev;
 static struct file_operations fops ={
          .owner   	   = THIS_MODULE,
-	 .llseek	   = hello_lsseek,
+	 .llseek           = hello_lsseek,
          .open    	   = hello_dev_open,
          .release          = hello_dev_release,
          .read             = hello_dev_read,
